@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <title>টাইপিং ওয়েবসাইট</title>
+  <style>
+    body {
+      font-family: 'Noto Sans Bengali', Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 30px;
+      text-align: center;
+    }
+    #quote {
+      font-size: 22px;
+      margin-bottom: 20px;
+      user-select: none;
+    }
+    #input {
+      font-size: 20px;
+      width: 90%;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    #stats {
+      margin-top: 15px;
+    }
+    .correct {
+      color: green;
+    }
+    .incorrect {
+      color: red;
+    }
+    #controls {
+      margin: 15px 0;
+    }
+    label {
+      margin: 0 10px;
+    }
+    #warning {
+      color: red;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet">
+</head>
+<body>
+  <h1>বাংলা এবং ইংরেজি টাইপিং</h1>
+
+  <div id="controls">
+    <label><input type="checkbox" id="toggleBackspace" checked> Backspace চালু</label>
+    <label><input type="checkbox" id="toggleHighlight" checked> হাইলাইট চালু</label>
+    <label><input type="checkbox" id="toggleScroll" checked> অটো স্ক্রল চালু</label>
+  </div>
+
+  <div>
+    <select id="languageSelector">
+      <option value="bn">বাংলা</option>
+      <option value="en">English</option>
+    </select>
+    <button onclick="newQuote()">নতুন লেখা</button>
+  </div>
+
+  <p id="warning">⚠️ আপনার সময় মাত্র ১ মিনিট বাকি!</p>
+  <div id="quote"></div>
+  <input type="text" id="input" autocomplete="off">
+  <div id="stats"></div>
+
+  <script>
+    const texts = {
+      bn: [
+        "আমি বাংলায় গান গাই।",
+        "বাংলাদেশ আমার জন্মভূমি।",
+        "সবার উপরে মানুষ সত্য।"
+      ],
+      en: [
+        "Typing in English is simple.",
+        "Practice makes a person perfect.",
+        "Knowledge is power."
+      ]
+    };
+
+    let currentQuote = "";
+    let startTime;
+    let timeLimit = 180; // in seconds (3 mins)
+    let timerInterval;
+
+    function newQuote() {
+      clearInterval(timerInterval);
+      const lang = document.getElementById("languageSelector").value;
+      currentQuote = texts[lang][Math.floor(Math.random() * texts[lang].length)];
+      document.getElementById("quote").textContent = currentQuote;
+      document.getElementById("input").value = "";
+      document.getElementById("stats").textContent = "";
+      document.getElementById("warning").style.display = "none";
+      startTime = new Date();
+      startTimer();
+    }
+
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        const elapsed = (new Date() - startTime) / 1000;
+        const remaining = timeLimit - elapsed;
+
+        if (remaining <= 60) {
+          document.getElementById("warning").style.display = "block";
+        }
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById("input").disabled = true;
+          document.getElementById("stats").textContent += " ⏰ সময় শেষ!";
+        }
+      }, 1000);
+    }
+
+    document.getElementById("input").addEventListener("keydown", function (e) {
+      if (!document.getElementById("toggleBackspace").checked && e.key === "Backspace") {
+        e.preventDefault();
+      }
+    });
+
+    document.getElementById("input").addEventListener("input", function () {
+      const input = this.value;
+      const highlight = document.getElementById("toggleHighlight").checked;
+      let correct = 0;
+      for (let i = 0; i < input.length; i++) {
+        if (input[i] === currentQuote[i]) correct++;
+      }
+      const elapsed = (new Date() - startTime) / 1000;
+      const wpm = Math.round((correct / 5) / (elapsed / 60));
+      const accuracy = Math.round((correct / input.length) * 100 || 0);
+      document.getElementById("stats").textContent = `WPM: ${wpm}, সঠিকতা: ${accuracy}%`;
+
+      if (input === currentQuote) {
+        document.getElementById("stats").textContent += " ✅ সম্পন্ন!";
+        clearInterval(timerInterval);
+      }
+
+      if (highlight) {
+        const quoteEl = document.getElementById("quote");
+        let display = "";
+        for (let i = 0; i < currentQuote.length; i++) {
+          if (i < input.length) {
+            display += `<span class='${input[i] === currentQuote[i] ? "correct" : "incorrect"}'>${currentQuote[i]}</span>`;
+          } else {
+            display += currentQuote[i];
+          }
+        }
+        quoteEl.innerHTML = display;
+      }
+    });
+
+    document.addEventListener("copy", (e) => e.preventDefault());
+
+    document.getElementById("input").addEventListener("focus", () => {
+      if (document.getElementById("toggleScroll").checked) {
+        document.getElementById("input").scrollIntoView({ behavior: "smooth" });
+      }
+    });
+
+    newQuote();
+  </script>
+</body>
+</html>
