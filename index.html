@@ -4,305 +4,70 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lekhoni Typing Practice</title>
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background-color: #f4f4f4;
-    }
-    header, footer {
-      background-color: #007acc;
-      color: white;
-      text-align: center;
-      padding: 12px 0;
-    }
-    .container {
-      display: flex;
-      flex-wrap: wrap;
-      min-height: 80vh;
-    }
-    .sidebar {
-      width: 250px;
-      background-color: #eee;
-      padding: 15px;
-    }
-    .main {
-      flex: 1;
-      padding: 20px;
-      min-width: 300px;
-    }
-    .hidden {
-      display: none;
-    }
-    textarea, select, input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
-    }
-    .passage-box {
-      border: 1px solid #ccc;
-      padding: 10px;
-      background-color: #fff;
-      height: 100px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-    .typing-box {
-      height: 150px;
-      width: 100%;
-      font-size: 1rem;
-    }
-    .options {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-      align-items: center;
-    }
-    .complaint-box {
-      margin-top: 20px;
-    }
-    .toggle {
-      margin: 10px 0;
-    }
-    .highlight {
-      background-color: #ffcccc;
-      padding: 2px 4px;
-      border-radius: 4px;
-    }
-    button {
-      cursor: pointer;
-      padding: 6px 12px;
-    }
-    @media (max-width: 700px) {
-      .container {
-        flex-direction: column;
-      }
-      .sidebar {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-    }
-  </style>
 </head>
 <body>
+  <header>
+    <h1>Lekhoni - টাইপিং অনুশীলন</h1>
+  </header>
 
-<header>
-  <h1>WELCOME TO <span style="color: #ffdd57;">LEKHONI</span></h1>
-</header>
+  <div class="container">
+    <div class="sidebar">
+      <h3>প্যাসেজ নির্বাচন করুন</h3>
+      <select id="passageSelector"></select>
 
-<div class="container">
-  <div class="sidebar" id="sidebar">
-    <h3>Menu</h3>
-    <ul>
-      <li><a href="#">Bengali Typing</a></li>
-      <li><a href="#">English Typing</a></li>
-      <li><a href="#">Grade 11-20 PDFs</a></li>
-    </ul>
-    <button onclick="toggleSidebar()">Hide Sidebar</button>
+      <h3>PDF থেকে প্যাসেজ</h3>
+      <input type="file" id="pdfInput" accept="application/pdf" />
+      <textarea id="pdfText" placeholder="PDF থেকে প্যাসেজ এখানে দেখানো হবে" rows="4" readonly></textarea>
+
+      <h3>নিজস্ব প্যাসেজ</h3>
+      <textarea id="customPassage" placeholder="আপনার নিজের প্যাসেজ লিখুন বা পেস্ট করুন" rows="4"></textarea>
+      <button onclick="loadCustomPassage()">লোড করুন</button>
+
+      <div class="toggle">
+        <label><input type="checkbox" id="allowBackspace" checked> ব্যাকস্পেস অনুমোদিত</label><br>
+        <label><input type="checkbox" id="highlightToggle" checked> ভুল শব্দ হাইলাইট</label><br>
+        <label><input type="checkbox" id="autoScroll" checked> অটো স্ক্রল</label>
+      </div>
+
+      <h3>সময় নির্বাচন (সেকেন্ডে)</h3>
+      <input type="number" id="timeLimit" value="60" min="10" step="10" />
+
+      <button onclick="startTest()">পরীক্ষা শুরু করুন</button>
+    </div>
+
+    <div class="main">
+      <div class="timer">Time: <span id="timeLeft">0</span> sec</div>
+
+      <h2>টাইপ করুন</h2>
+      <div class="passage-box" id="passageDisplay"></div>
+      <textarea class="typing-box" id="typingInput" placeholder="এখানে টাইপ করুন..." disabled></textarea>
+
+      <div class="options">
+        <button onclick="checkResult()">ফলাফল দেখুন</button>
+        <button onclick="resetTest()">রিসেট</button>
+      </div>
+
+      <div id="results" class="hidden">
+        <p>মোট শব্দ: <span id="totalWords"></span></p>
+        <p>সঠিক শব্দ: <span id="correctWords"></span></p>
+        <p>ভুল শব্দ: <span id="wrongWords"></span></p>
+        <p>স্পীড (WPM): <span id="wpm"></span></p>
+      </div>
+
+      <div class="complaint-box">
+        <h3>অভিযোগ / পরামর্শ</h3>
+        <textarea placeholder="আপনার মতামত লিখুন..." rows="3"></textarea><br>
+        <button>জমা দিন</button>
+      </div>
+    </div>
   </div>
 
-  <div class="main">
+  <footer>
+    <p>&copy; 2025 Lekhoni. Developed with ❤️</p>
+  </footer>
 
-    <div class="options">
-      <label>Language:
-        <select id="languageSelect">
-          <option value="bn">Bengali</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-
-      <label>Set Time:
-        <select id="timeSelect">
-          <option value="60">1 Minute</option>
-          <option value="120">2 Minutes</option>
-          <option value="180">3 Minutes</option>
-          <option value="300">5 Minutes</option>
-          <option value="600">10 Minutes</option>
-          <option value="900">15 Minutes</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="toggle">
-      <label><input type="checkbox" id="toggleBackspace"> Backspace ON/OFF</label><br>
-      <label><input type="checkbox" id="toggleScroll"> Auto-scroll ON/OFF</label><br>
-      <label><input type="checkbox" id="toggleHighlight" checked> Highlight Wrong Words</label>
-    </div>
-
-    <!-- User passage paste area -->
-    <div class="mb-3">
-      <label for="userPassage" style="font-weight:bold;">Paste Your Own Passage Here:</label>
-      <textarea id="userPassage" rows="5" placeholder="Paste your passage here..."></textarea>
-      <button type="button" onclick="setUserPassage()" style="margin-top: 8px;">Load Passage</button>
-    </div>
-
-    <h3>Passage</h3>
-    <div class="passage-box" id="passage">
-      The quick brown fox jumps over the lazy dog.
-    </div>
-
-    <h3>Type Here</h3>
-    <textarea class="typing-box" id="typingBox" placeholder="Start typing here..."></textarea>
-
-    <div class="results">
-      <p><strong>WPM:</strong> <span id="wpm">0</span></p>
-      <p><strong>Wrong Words:</strong> <span id="wrongWords">0</span></p>
-      <p><strong>Time Left:</strong> <span id="timeLeft">0</span> sec</p>
-    </div>
-
-    <h3>PDF Upload & Download</h3>
-    <input type="file" id="pdfUpload" accept="application/pdf" />
-    <button onclick="downloadPDF()">Download Current Passage</button>
-
-    <div class="complaint-box">
-      <h4>Submit a Complaint</h4>
-      <textarea rows="4" placeholder="Write your complaint here..."></textarea>
-      <button>Submit</button>
-    </div>
-
-  </div>
-</div>
-
-<footer>
-  <p>&copy; 2025 Typing Website | Developed by Masud</p>
-</footer>
-
-<script>
-  const typingBox = document.getElementById("typingBox");
-  const passageBox = document.getElementById("passage");
-  const wpmDisplay = document.getElementById("wpm");
-  const wrongDisplay = document.getElementById("wrongWords");
-  const timeLeftDisplay = document.getElementById("timeLeft");
-  const timeSelect = document.getElementById("timeSelect");
-  const toggleHighlight = document.getElementById("toggleHighlight");
-  const toggleBackspace = document.getElementById("toggleBackspace");
-  const toggleScroll = document.getElementById("toggleScroll");
-  const pdfUpload = document.getElementById("pdfUpload");
-  const userPassage = document.getElementById("userPassage");
-
-  let timer;
-  let timeLeft;
-  let started = false;
-
-  typingBox.addEventListener("keydown", (e) => {
-    if (!toggleBackspace.checked && e.key === "Backspace") {
-      e.preventDefault();
-    }
-  });
-
-  typingBox.addEventListener("input", () => {
-    if (!started) {
-      startTimer();
-      started = true;
-      toggleHighlight.disabled = true;
-    }
-    checkTyping();
-    if(toggleScroll.checked){
-      typingBox.scrollTop = typingBox.scrollHeight;
-    }
-  });
-
-  function startTimer() {
-    timeLeft = parseInt(timeSelect.value);
-    timeLeftDisplay.textContent = timeLeft;
-    timer = setInterval(() => {
-      timeLeft--;
-      timeLeftDisplay.textContent = timeLeft;
-      if (timeLeft <= 0) {
-        clearInterval(timer);
-        typingBox.disabled = true;
-      }
-    }, 1000);
-  }
-
-  function checkTyping() {
-    const typed = typingBox.value.trim().split(/\s+/);
-    const original = passageBox.textContent.trim().split(/\s+/);
-    let wrong = 0;
-    let resultHTML = "";
-
-    for (let i = 0; i < original.length; i++) {
-      if (typed[i] === undefined) {
-        resultHTML += original[i] + " ";
-        continue;
-      }
-      if (typed[i] !== original[i]) {
-        wrong++;
-        if (toggleHighlight.checked) {
-          resultHTML += `<span class="highlight">${original[i]}</span> `;
-        } else {
-          resultHTML += original[i] + " ";
-        }
-      } else {
-        resultHTML += original[i] + " ";
-      }
-    }
-
-    passageBox.innerHTML = resultHTML.trim();
-
-    const minutes = (parseInt(timeSelect.value) - timeLeft) / 60;
-    const wpm = minutes > 0 ? Math.round((typed.length - wrong) / minutes) : 0;
-    wpmDisplay.textContent = wpm;
-    wrongDisplay.textContent = wrong;
-  }
-
-  function toggleSidebar() {
-    const sidebar = document.getElementById("sidebar");
-    sidebar.classList.toggle("hidden");
-  }
-
-  pdfUpload.addEventListener("change", function () {
-    const file = this.files[0];
-    if (file && file.type === "application/pdf") {
-      const fileReader = new FileReader();
-      fileReader.onload = function () {
-        const typedArray = new Uint8Array(this.result);
-        pdfjsLib.getDocument(typedArray).promise.then(function (pdf) {
-          pdf.getPage(1).then(function (page) {
-            page.getTextContent().then(function (textContent) {
-              const textItems = textContent.items.map(item => item.str);
-              const finalText = textItems.join(" ");
-              passageBox.textContent = finalText;
-            });
-          });
-        });
-      };
-      fileReader.readAsArrayBuffer(file);
-    } else {
-      alert("Please upload a valid PDF file.");
-    }
-  });
-
-  function downloadPDF() {
-    const blob = new Blob([passageBox.textContent], { type: "application/pdf" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "passage.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  function setUserPassage() {
-    const userText = userPassage.value.trim();
-    if (userText.length === 0) {
-      alert('Please paste some text first!');
-      return;
-    }
-    passageBox.textContent = userText;
-    typingBox.value = '';
-    started = false;
-    timeLeftDisplay.textContent = timeSelect.value;
-    typingBox.disabled = false;
-    toggleHighlight.disabled = false;
-    clearInterval(timer);
-    wpmDisplay.textContent = 0;
-    wrongDisplay.textContent = 0;
-  }
-</script>
-
+  <script src="script.js"></script>
 </body>
 </html>
