@@ -1,73 +1,907 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lekhoni Typing Practice</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>টাইপিং অনুশীলন</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        /* Light Mode */
+        body.light-mode {
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        /* Dark Mode */
+        body.dark-mode {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        /* Normal Mode (Default) */
+        body.normal-mode {
+            background-color: #ffffff;
+            color: #333;
+        }
+        .sidebar {
+            width: 280px;
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        .main-content {
+            transition: margin-left 0.3s ease-in-out;
+        }
+        .typing-box {
+            min-height: 120px; /* Approximately 5 lines of text */
+            resize: vertical; /* Allow vertical resizing */
+            overflow-y: auto; /* Enable auto-scroll for typing box */
+        }
+        .passage-box {
+            min-height: 38px; /* Minimum height as requested */
+            height: auto; /* Allow height to adjust based on content */
+            overflow-y: auto; /* Enable auto-scroll for passage box */
+        }
+        .correct-char {
+            color: green;
+        }
+        .incorrect-char {
+            color: red;
+            background-color: rgba(255, 0, 0, 0.1);
+        }
+        .current-char {
+            background-color: yellow;
+            color: black;
+            border-radius: 2px;
+        }
+        .wrong-word-highlight {
+            background-color: rgba(255, 0, 0, 0.3);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+        /* Modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--bg-color); /* Use CSS variable for background */
+            padding: 24px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--text-color); /* Use CSS variable for text color */
+        }
+        /* Custom properties for theme colors */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333;
+            --card-bg: #f9fafb;
+            --border-color: #e5e7eb;
+        }
+        body.light-mode:root {
+            --bg-color: #f0f2f5;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+        }
+        body.dark-mode:root {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --card-bg: #2d3748;
+            --border-color: #4a5568;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        input, textarea, select {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        button {
+            transition: background-color 0.2s ease-in-out;
+        }
+    </style>
 </head>
-<body>
-  <header>
-    <h1>Lekhoni - টাইপিং অনুশীলন</h1>
-  </header>
+<body class="normal-mode flex h-screen">
 
-  <div class="container">
-    <div class="sidebar">
-      <h3>প্যাসেজ নির্বাচন করুন</h3>
-      <select id="passageSelector"></select>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar bg-gray-800 text-white p-6 flex flex-col shadow-lg fixed h-full z-50 md:relative">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-bold">টাইপিং প্ল্যাটফর্ম</h2>
+            <button id="hideSidebarBtn" class="md:hidden text-white focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <nav class="space-y-4 flex-grow">
+            <a href="#" id="bengaliTypingLink" class="block py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-200">বাংলা টাইপিং</a>
+            <a href="#" id="englishTypingLink" class="block py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-200">ইংরেজি টাইপিং</a>
+            <div class="relative">
+                <a href="#" id="pdfDownloadLink" class="block py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-200">১১-২০ গ্রেড পিডিএফ</a>
+                <!-- PDF Download Condition Message -->
+                <div id="pdfMessage" class="absolute top-full left-0 mt-2 p-3 bg-yellow-500 text-sm text-yellow-900 rounded-md shadow-md hidden">
+                    প্রতি একটা পিডিএফ আপলোড করলে ২টা ডাউনলোড করতে পারবেন। (এই কার্যকারিতা সার্ভার-সাইড বাস্তবায়ন প্রয়োজন)
+                </div>
+            </div>
+            <button id="showComplaintBoxBtn" class="w-full text-left py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 transition duration-200">অভিযোগ বক্স</button>
+        </nav>
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold mb-2">থিম</h3>
+            <div class="flex space-x-2">
+                <button id="normalModeBtn" class="flex-1 py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition duration-200">স্বাভাবিক</button>
+                <button id="lightModeBtn" class="flex-1 py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 transition duration-200">হালকা</button>
+                <button id="darkModeBtn" class="flex-1 py-2 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 transition duration-200">গাঢ়</button>
+            </div>
+        </div>
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold mb-2">সেটিংস</h3>
+            <div class="space-y-2">
+                <label class="flex items-center space-x-2">
+                    <input type="checkbox" id="backspaceToggle" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                    <span>ব্যাকস্পেস চালু/বন্ধ</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                    <input type="checkbox" id="autoScrollToggle" class="form-checkbox h-5 w-5 text-blue-600 rounded" checked>
+                    <span>স্বয়ংক্রিয় স্ক্রল চালু/বন্ধ</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                    <input type="checkbox" id="highlightWrongToggle" class="form-checkbox h-5 w-5 text-blue-600 rounded" checked>
+                    <span>ভুল শব্দ হাইলাইট চালু/বন্ধ</span>
+                </label>
+            </div>
+        </div>
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold mb-2">অ্যাকাউন্ট (ঐচ্ছিক)</h3>
+            <button class="w-full py-2 px-4 rounded-lg bg-green-600 hover:bg-green-700 transition duration-200">অ্যাকাউন্ট তৈরি করুন</button>
+        </div>
+    </aside>
 
-      <h3>PDF থেকে প্যাসেজ</h3>
-      <input type="file" id="pdfInput" accept="application/pdf" />
-      <textarea id="pdfText" placeholder="PDF থেকে প্যাসেজ এখানে দেখানো হবে" rows="4" readonly></textarea>
+    <!-- Main Content Area -->
+    <div id="mainContent" class="flex-1 flex flex-col p-6 md:ml-70 relative">
+        <!-- Sidebar Toggle Button for Mobile -->
+        <button id="showSidebarBtn" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-md shadow-lg">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
 
-      <h3>নিজস্ব প্যাসেজ</h3>
-      <textarea id="customPassage" placeholder="আপনার নিজের প্যাসেজ লিখুন বা পেস্ট করুন" rows="4"></textarea>
-      <button onclick="loadCustomPassage()">লোড করুন</button>
+        <h1 class="text-4xl font-extrabold mb-8 text-center">টাইপিং অনুশীলন</h1>
 
-      <div class="toggle">
-        <label><input type="checkbox" id="allowBackspace" checked> ব্যাকস্পেস অনুমোদিত</label><br>
-        <label><input type="checkbox" id="highlightToggle" checked> ভুল শব্দ হাইলাইট</label><br>
-        <label><input type="checkbox" id="autoScroll" checked> অটো স্ক্রল</label>
-      </div>
+        <!-- Language and Time Selection -->
+        <div class="card p-6 rounded-lg shadow-md mb-8 border">
+            <h2 class="text-2xl font-semibold mb-4">ভাষা এবং সময় নির্ধারণ করুন</h2>
+            <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-6">
+                <div class="flex-1 w-full">
+                    <label for="languageSelect" class="block text-lg font-medium mb-2">ভাষা নির্বাচন করুন:</label>
+                    <select id="languageSelect" class="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500">
+                        <option value="bengali">বাংলা</option>
+                        <option value="english">ইংরেজি</option>
+                    </select>
+                </div>
+                <div class="flex-1 w-full">
+                    <label for="timeSelect" class="block text-lg font-medium mb-2">সময় সেট করুন (মিনিট):</label>
+                    <select id="timeSelect" class="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500">
+                        <option value="1">১ মিনিট</option>
+                        <option value="2">২ মিনিট</option>
+                        <option value="3">৩ মিনিট</option>
+                        <option value="5">৫ মিনিট</option>
+                        <option value="10">১০ মিনিট</option>
+                        <option value="15">১৫ মিনিট</option>
+                    </select>
+                </div>
+            </div>
+            <button id="selectPassageBtn" class="w-full py-3 px-6 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">প্যাসেজ নির্বাচন করুন</button>
+        </div>
 
-      <h3>সময় নির্বাচন (সেকেন্ডে)</h3>
-      <input type="number" id="timeLimit" value="60" min="10" step="10" />
+        <!-- Passage Selection and Display -->
+        <div class="card p-6 rounded-lg shadow-md mb-8 border">
+            <h2 class="text-2xl font-semibold mb-4">প্যাসেজ নির্বাচন</h2>
+            <div class="mb-4">
+                <label for="passageSelect" class="block text-lg font-medium mb-2">প্যাসেজ নম্বর নির্বাচন করুন:</label>
+                <select id="passageSelect" class="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500">
+                    <!-- Options will be dynamically loaded by JavaScript -->
+                </select>
+            </div>
+            <div id="passageDisplay" class="passage-box w-full p-4 border rounded-md text-lg leading-relaxed mb-6 select-none" style="user-select: none;">
+                <!-- Passage will be displayed here -->
+                একটি প্যাসেজ নির্বাচন করুন এবং টাইপ করা শুরু করুন...
+            </div>
+            <button id="startTypingBtn" class="w-full py-3 px-6 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">টাইপিং শুরু করুন</button>
+        </div>
 
-      <button onclick="startTest()">পরীক্ষা শুরু করুন</button>
+        <!-- Typing Area -->
+        <div class="card p-6 rounded-lg shadow-md mb-8 border">
+            <h2 class="text-2xl font-semibold mb-4">আপনার টাইপিং</h2>
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-xl font-medium">সময় বাকি: <span id="timer" class="font-bold text-blue-600">০:০০</span></span>
+                <button id="resetBtn" class="py-2 px-4 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">রিসেট</button>
+            </div>
+            <textarea id="typingInput" class="typing-box w-full p-4 border rounded-md text-lg leading-relaxed focus:ring-2 focus:ring-blue-500" placeholder="এখানে টাইপ করা শুরু করুন..." disabled></textarea>
+            <button id="copyTypedTextBtn" class="mt-4 py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">আপনার লেখা কপি করুন</button>
+        </div>
+
+        <!-- Results Display -->
+        <div id="resultsSection" class="card p-6 rounded-lg shadow-md mb-8 border hidden">
+            <h2 class="text-2xl font-semibold mb-4">ফলাফল</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-lg">
+                <div class="p-4 border rounded-md text-center">
+                    <p class="font-medium">WPM (মোট):</p>
+                    <p id="wpmGross" class="text-3xl font-bold text-green-600">০</p>
+                </div>
+                <div class="p-4 border rounded-md text-center">
+                    <p class="font-medium">WPM (সঠিক):</p>
+                    <p id="wpmNet" class="text-3xl font-bold text-green-600">০</p>
+                </div>
+                <div class="p-4 border rounded-md text-center">
+                    <p class="font-medium">CPM:</p>
+                    <p id="cpm" class="text-3xl font-bold text-green-600">০</p>
+                </div>
+                <div class="p-4 border rounded-md text-center col-span-full">
+                    <p class="font-medium">সঠিকতা:</p>
+                    <p id="accuracy" class="text-3xl font-bold text-blue-600">০%</p>
+                </div>
+            </div>
+            <div class="mt-6">
+                <h3 class="text-xl font-semibold mb-2">ভুল শব্দ:</h3>
+                <div id="wrongWordsDisplay" class="p-4 border rounded-md text-red-500">
+                    <!-- Wrong words will be displayed here -->
+                    কোনো ভুল শব্দ নেই।
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="main">
-      <div class="timer">Time: <span id="timeLeft">0</span> sec</div>
-
-      <h2>টাইপ করুন</h2>
-      <div class="passage-box" id="passageDisplay"></div>
-      <textarea class="typing-box" id="typingInput" placeholder="এখানে টাইপ করুন..." disabled></textarea>
-
-      <div class="options">
-        <button onclick="checkResult()">ফলাফল দেখুন</button>
-        <button onclick="resetTest()">রিসেট</button>
-      </div>
-
-      <div id="results" class="hidden">
-        <p>মোট শব্দ: <span id="totalWords"></span></p>
-        <p>সঠিক শব্দ: <span id="correctWords"></span></p>
-        <p>ভুল শব্দ: <span id="wrongWords"></span></p>
-        <p>স্পীড (WPM): <span id="wpm"></span></p>
-      </div>
-
-      <div class="complaint-box">
-        <h3>অভিযোগ / পরামর্শ</h3>
-        <textarea placeholder="আপনার মতামত লিখুন..." rows="3"></textarea><br>
-        <button>জমা দিন</button>
-      </div>
+    <!-- Complaint Box Modal -->
+    <div id="complaintModal" class="modal">
+        <div class="modal-content card">
+            <span class="close-button" id="closeComplaintModalBtn">&times;</span>
+            <h2 class="text-2xl font-semibold mb-4">অভিযোগ জমা দিন</h2>
+            <form id="complaintForm">
+                <div class="mb-4">
+                    <label for="complaintSubject" class="block text-lg font-medium mb-2">বিষয়:</label>
+                    <input type="text" id="complaintSubject" class="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="complaintMessage" class="block text-lg font-medium mb-2">আপনার অভিযোগ:</label>
+                    <textarea id="complaintMessage" class="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 h-32" required></textarea>
+                </div>
+                <button type="submit" class="w-full py-3 px-6 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">জমা দিন</button>
+            </form>
+            <div id="complaintStatus" class="mt-4 text-center hidden"></div>
+        </div>
     </div>
-  </div>
 
-  <footer>
-    <p>&copy; 2025 Lekhoni. Developed with ❤️</p>
-  </footer>
+    <script>
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const hideSidebarBtn = document.getElementById('hideSidebarBtn');
+        const showSidebarBtn = document.getElementById('showSidebarBtn');
+        const mainContent = document.getElementById('mainContent');
 
-  <script src="script.js"></script>
+        const languageSelect = document.getElementById('languageSelect');
+        const timeSelect = document.getElementById('timeSelect');
+        const selectPassageBtn = document.getElementById('selectPassageBtn');
+        const passageSelect = document.getElementById('passageSelect');
+        const passageDisplay = document.getElementById('passageDisplay');
+        const typingInput = document.getElementById('typingInput');
+        const timerDisplay = document.getElementById('timer');
+        const startTypingBtn = document.getElementById('startTypingBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const wpmGrossDisplay = document.getElementById('wpmGross');
+        const wpmNetDisplay = document.getElementById('wpmNet');
+        const cpmDisplay = document.getElementById('cpm');
+        const accuracyDisplay = document.getElementById('accuracy');
+        const wrongWordsDisplay = document.getElementById('wrongWordsDisplay');
+        const copyTypedTextBtn = document.getElementById('copyTypedTextBtn');
+
+        // Sidebar Links
+        const bengaliTypingLink = document.getElementById('bengaliTypingLink');
+        const englishTypingLink = document.getElementById('englishTypingLink');
+        const pdfDownloadLink = document.getElementById('pdfDownloadLink');
+        const pdfMessage = document.getElementById('pdfMessage');
+
+        // Theme Buttons
+        const normalModeBtn = document.getElementById('normalModeBtn');
+        const lightModeBtn = document.getElementById('lightModeBtn');
+        const darkModeBtn = document.getElementById('darkModeBtn');
+
+        // Settings Toggles
+        const backspaceToggle = document.getElementById('backspaceToggle');
+        const autoScrollToggle = document.getElementById('autoScrollToggle');
+        const highlightWrongToggle = document.getElementById('highlightWrongToggle');
+
+        // Complaint Box
+        const showComplaintBoxBtn = document.getElementById('showComplaintBoxBtn');
+        const complaintModal = document.getElementById('complaintModal');
+        const closeComplaintModalBtn = document.getElementById('closeComplaintModalBtn');
+        const complaintForm = document.getElementById('complaintForm');
+        const complaintStatus = document.getElementById('complaintStatus');
+
+        // Global Variables
+        let currentLanguage = 'bengali';
+        let selectedTime = 1; // in minutes
+        let passages = {
+            bengali: [
+                "১. কম্পিউটারের কিবোর্ডে টাইপ করার অভ্যাস গড়ে তোলা খুব জরুরি। নিয়মিত অনুশীলনের মাধ্যমে টাইপিং গতি বাড়ানো যায়।",
+                "২. বাংলা টাইপিং শেখার জন্য বিভিন্ন অনলাইন টুলস এবং সফটওয়্যার ব্যবহার করা যেতে পারে। এতে দ্রুত শেখা সম্ভব।",
+                "৩. সঠিক টাইপিং কৌশল অনুসরণ করলে হাতের ব্যথা এড়ানো যায় এবং টাইপিং এর মান উন্নত হয়।",
+                "৪. প্রতিদিন নির্দিষ্ট সময় টাইপিং অনুশীলন করলে পেশাদার টাইপিস্ট হওয়া সম্ভব। এটি ধৈর্য এবং অনুশীলনের উপর নির্ভর করে।",
+                "৫. ইন্টারনেটে বাংলা কন্টেন্ট তৈরি করার জন্য বাংলা টাইপিং দক্ষতা অপরিহার্য। এটি ডিজিটাল বিশ্বে যোগাযোগের একটি গুরুত্বপূর্ণ মাধ্যম।",
+                "৬. টাইপিং শেখার সময় ভুল করা স্বাভাবিক। ভুল থেকে শেখা এবং নিজেকে উন্নত করা উচিত।",
+                "৭. দ্রুত টাইপিং কেবল কাজের গতি বাড়ায় না, এটি আপনার আত্মবিশ্বাসও বাড়ায়।",
+                "৮. আধুনিক বিশ্বে টাইপিং দক্ষতা একটি মৌলিক যোগ্যতা হিসেবে বিবেচিত হয়।",
+                "৯. বাংলা টাইপিং এর জন্য ফোনেটিক এবং প্রভাত উভয় পদ্ধতিই জনপ্রিয়। আপনার জন্য যেটি সুবিধাজনক সেটি বেছে নিন।",
+                "১০. টাইপিং অনুশীলনের সময় আরামদায়ক ভঙ্গিতে বসুন এবং আপনার চোখ স্ক্রিন থেকে একটি নির্দিষ্ট দূরত্বে রাখুন।",
+                "১১. টাইপিং গতি পরিমাপের জন্য WPM (Words Per Minute) একটি জনপ্রিয় মেট্রিক।",
+                "১২. টাইপিং শেখার সময় ধৈর্য হারাবেন না। নিয়মিত অনুশীলন আপনাকে সফল করবে।",
+                "১৩. বাংলা ভাষার সৌন্দর্য টাইপিং এর মাধ্যমে আরও বেশি মানুষের কাছে পৌঁছানো সম্ভব।",
+                "১৪. টাইপিং প্রতিযোগিতায় অংশ নিয়ে আপনার দক্ষতা পরীক্ষা করতে পারেন।",
+                "১৫. টাইপিং শেখা আপনার কর্মজীবনে নতুন দিগন্ত উন্মোচন করতে পারে।",
+                "১৬. টাইপিং অনুশীলন আপনার মস্তিষ্কের কার্যকারিতা বাড়াতে সাহায্য করে।",
+                "১৭. টাইপিং এর সময় কীবোর্ডের দিকে না তাকিয়ে টাইপ করার অভ্যাস করুন।",
+                "১৮. বাংলা টাইপিং এর জন্য ইউনিকোড ব্যবহার করা হয়, যা আন্তর্জাতিক মানদণ্ড মেনে চলে।",
+                "১৯. টাইপিং শেখা একটি মজার অভিজ্ঞতা হতে পারে যদি আপনি এটিকে চ্যালেঞ্জ হিসেবে নেন।",
+                "২০. টাইপিং দক্ষতা আপনাকে দ্রুত ইমেল লিখতে, রিপোর্ট তৈরি করতে এবং অন্যান্য ডিজিটাল কাজ সম্পন্ন করতে সাহায্য করবে।",
+                "২১. টাইপিং এর সময় আপনার আঙ্গুলগুলি সঠিক অবস্থানে রাখুন।",
+                "২২. বাংলা টাইপিং এর জন্য বিভিন্ন ফন্ট ব্যবহার করা যেতে পারে।",
+                "২৩. টাইপিং শেখার জন্য অনলাইন টিউটোরিয়াল এবং ভিডিও দেখতে পারেন।",
+                "২৪. টাইপিং অনুশীলন আপনাকে আরও মনোযোগী হতে সাহায্য করবে।",
+                "২৫. টাইপিং দক্ষতা আপনার ব্যক্তিগত এবং পেশাগত জীবনে অনেক সুবিধা নিয়ে আসে।"
+            ],
+            english: [
+                "1. The quick brown fox jumps over the lazy dog. This sentence is often used to test typewriters and computer keyboards.",
+                "2. Practice makes perfect. Consistent daily typing drills can significantly improve your speed and accuracy.",
+                "3. Touch typing is a method of typing without looking at the keyboard. It relies on muscle memory.",
+                "4. Learning to type efficiently is a valuable skill in today's digital world. It saves time and increases productivity.",
+                "5. Many online platforms offer free typing lessons and games to help you master the art of typing.",
+                "6. Setting realistic goals for your typing speed can motivate you to practice more regularly.",
+                "7. Proper posture and hand position are crucial for comfortable and injury-free typing sessions.",
+                "8. The average typing speed for most people is around 40 words per minute. Aim higher with practice.",
+                "9. Accuracy is just as important as speed. Typing fast with many errors is not efficient.",
+                "10. Take short breaks during long typing sessions to rest your eyes and hands.",
+                "11. WPM stands for Words Per Minute, a common metric for measuring typing speed.",
+                "12. Typing tests often include a variety of characters and punctuation to assess overall skill.",
+                "13. Regular practice helps build muscle memory, allowing your fingers to find keys without conscious thought.",
+                "14. Typing is a fundamental skill for students, professionals, and anyone who uses a computer regularly.",
+                "15. Challenge yourself with different types of texts, from simple sentences to complex paragraphs.",
+                "16. The sound of keys clicking can be satisfying as your speed increases.",
+                "17. Don't be discouraged by mistakes; they are part of the learning process. Focus on correcting them.",
+                "18. Online typing communities can provide support and encouragement on your typing journey.",
+                "19. Investing in a comfortable keyboard can also enhance your typing experience.",
+                "20. Typing faster means you can communicate more effectively and complete tasks quicker.",
+                "21. The more you type, the more natural it becomes. Consistency is key.",
+                "22. Explore different typing layouts like QWERTY, Dvorak, or Colemak to find what suits you best.",
+                "23. Typing games can make the learning process fun and engaging, especially for beginners.",
+                "24. Mastering typing can open up new career opportunities, such as transcription or data entry.",
+                "25. Celebrate your progress, no matter how small, to stay motivated on your path to typing mastery."
+            ]
+        };
+        let currentPassage = "";
+        let timer = null;
+        let timeLeft = 0;
+        let startTime = 0;
+        let typedCharacters = 0;
+        let correctCharacters = 0;
+        let incorrectCharacters = 0;
+        let typedWords = [];
+        let passageWords = [];
+        let isTypingStarted = false;
+        let currentWordIndex = 0;
+        let currentCharIndex = 0;
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPassages();
+            updatePassageOptions();
+            applyTheme(localStorage.getItem('theme') || 'normal-mode');
+            // Initialize toggle states
+            backspaceToggle.checked = true; // Default to ON
+            autoScrollToggle.checked = true; // Default to ON
+            highlightWrongToggle.checked = true; // Default to ON
+        });
+
+        // Event Listeners
+
+        // Sidebar Toggles
+        hideSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.add('hidden');
+            mainContent.classList.remove('md:ml-70');
+            showSidebarBtn.classList.remove('hidden');
+        });
+
+        showSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.remove('hidden');
+            mainContent.classList.add('md:ml-70');
+            showSidebarBtn.classList.add('hidden');
+        });
+
+        // Language and Time Selection
+        languageSelect.addEventListener('change', () => {
+            currentLanguage = languageSelect.value;
+            updatePassageOptions();
+            resetTypingTest();
+        });
+
+        timeSelect.addEventListener('change', () => {
+            selectedTime = parseInt(timeSelect.value);
+            resetTypingTest();
+        });
+
+        selectPassageBtn.addEventListener('click', () => {
+            // This button now primarily updates the passage selection,
+            // the actual display and start button are separate.
+            updatePassageDisplay();
+            startTypingBtn.disabled = false; // Enable start button once passage is selected
+            typingInput.disabled = true; // Keep input disabled until start is clicked
+            typingInput.value = ''; // Clear previous input
+            resetResults();
+        });
+
+        passageSelect.addEventListener('change', () => {
+            updatePassageDisplay();
+            startTypingBtn.disabled = false; // Enable start button once passage is selected
+            typingInput.disabled = true; // Keep input disabled until start is clicked
+            typingInput.value = ''; // Clear previous input
+            resetResults();
+        });
+
+        startTypingBtn.addEventListener('click', () => {
+            if (!currentPassage) {
+                alert("অনুগ্রহ করে একটি প্যাসেজ নির্বাচন করুন।"); // Using alert as a temporary placeholder for a custom modal
+                return;
+            }
+            startTypingTest();
+        });
+
+        typingInput.addEventListener('keydown', (e) => {
+            // Prevent backspace if toggle is off
+            if (e.key === 'Backspace' && !backspaceToggle.checked) {
+                e.preventDefault();
+            }
+        });
+
+        typingInput.addEventListener('input', () => {
+            if (!isTypingStarted) {
+                startTimer();
+                isTypingStarted = true;
+            }
+            processTyping();
+        });
+
+        resetBtn.addEventListener('click', resetTypingTest);
+        copyTypedTextBtn.addEventListener('click', copyTypedText);
+
+        // Sidebar Link Actions
+        bengaliTypingLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            languageSelect.value = 'bengali';
+            languageSelect.dispatchEvent(new Event('change')); // Trigger change event
+            if (window.innerWidth < 768) { // Hide sidebar on mobile after selection
+                hideSidebarBtn.click();
+            }
+        });
+
+        englishTypingLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            languageSelect.value = 'english';
+            languageSelect.dispatchEvent(new Event('change')); // Trigger change event
+            if (window.innerWidth < 768) { // Hide sidebar on mobile after selection
+                hideSidebarBtn.click();
+            }
+        });
+
+        pdfDownloadLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            pdfMessage.classList.toggle('hidden');
+            // In a real application, you'd implement the upload/download logic here.
+            // This is just a placeholder message.
+        });
+
+        // Theme Buttons
+        normalModeBtn.addEventListener('click', () => applyTheme('normal-mode'));
+        lightModeBtn.addEventListener('click', () => applyTheme('light-mode'));
+        darkModeBtn.addEventListener('click', () => applyTheme('dark-mode'));
+
+        // Complaint Box
+        showComplaintBoxBtn.addEventListener('click', () => {
+            complaintModal.style.display = 'flex';
+        });
+
+        closeComplaintModalBtn.addEventListener('click', () => {
+            complaintModal.style.display = 'none';
+            complaintForm.reset();
+            complaintStatus.classList.add('hidden');
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target == complaintModal) {
+                complaintModal.style.display = 'none';
+                complaintForm.reset();
+                complaintStatus.classList.add('hidden');
+            }
+        });
+
+        complaintForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const subject = document.getElementById('complaintSubject').value;
+            const message = document.getElementById('complaintMessage').value;
+
+            // In a real application, you would send this data to a server.
+            // For now, we'll just show a success message.
+            console.log("Complaint Submitted:", { subject, message });
+            complaintStatus.textContent = "আপনার অভিযোগ সফলভাবে জমা দেওয়া হয়েছে!";
+            complaintStatus.className = "mt-4 text-center text-green-600 font-semibold";
+            complaintStatus.classList.remove('hidden');
+            // Optionally, clear the form after a delay or close the modal
+            setTimeout(() => {
+                complaintModal.style.display = 'none';
+                complaintForm.reset();
+                complaintStatus.classList.add('hidden');
+            }, 2000);
+        });
+
+
+        // Functions
+
+        /**
+         * Loads passages from the `passages` object into the passageSelect dropdown.
+         * This function is called on page load and when the language changes.
+         */
+        function updatePassageOptions() {
+            passageSelect.innerHTML = ''; // Clear existing options
+            const currentPassages = passages[currentLanguage];
+            if (currentPassages && currentPassages.length > 0) {
+                currentPassages.forEach((passage, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${currentLanguage === 'bengali' ? 'বাংলা' : 'ইংরেজি'} ${index + 1}`;
+                    passageSelect.appendChild(option);
+                });
+                // Select the first passage by default
+                passageSelect.value = 0;
+                updatePassageDisplay();
+                startTypingBtn.disabled = false; // Enable start button
+            } else {
+                passageDisplay.innerHTML = `এই ভাষার জন্য কোনো প্যাসেজ নেই। অনুগ্রহ করে যোগ করুন।`;
+                startTypingBtn.disabled = true; // Disable start button if no passages
+            }
+        }
+
+        /**
+         * Displays the selected passage in the passageDisplay area.
+         */
+        function updatePassageDisplay() {
+            const selectedPassageIndex = passageSelect.value;
+            currentPassage = passages[currentLanguage][selectedPassageIndex];
+            passageWords = currentPassage.split(/\s+/); // Split by one or more spaces
+            renderPassage();
+        }
+
+        /**
+         * Renders the passage with character highlighting based on typing progress.
+         */
+        function renderPassage() {
+            let html = '';
+            let typedText = typingInput.value;
+            let typedChars = typedText.split('');
+            let passageChars = currentPassage.split('');
+
+            for (let i = 0; i < passageChars.length; i++) {
+                let char = passageChars[i];
+                let typedChar = typedChars[i];
+
+                let spanClass = '';
+                if (typedChar === undefined) {
+                    // Not yet typed
+                    if (i === typedChars.length) { // current character to type
+                        spanClass = 'current-char';
+                    }
+                } else if (typedChar === char) {
+                    spanClass = 'correct-char';
+                } else {
+                    spanClass = 'incorrect-char';
+                }
+
+                html += `<span class="${spanClass}">${char}</span>`;
+            }
+            passageDisplay.innerHTML = html;
+
+            // Auto-scroll passage display
+            if (autoScrollToggle.checked) {
+                const currentCharElement = passageDisplay.querySelector('.current-char');
+                if (currentCharElement) {
+                    currentCharElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        }
+
+
+        /**
+         * Starts the typing test.
+         */
+        function startTypingTest() {
+            resetTypingTest(); // Ensure a clean slate
+            typingInput.disabled = false;
+            typingInput.focus();
+            startTime = Date.now();
+            isTypingStarted = false; // Timer starts on first keypress
+            timerDisplay.textContent = formatTime(selectedTime * 60);
+            resultsSection.classList.add('hidden'); // Hide results until test ends
+            startTypingBtn.disabled = true; // Disable start button once started
+        }
+
+        /**
+         * Starts the countdown timer.
+         */
+        function startTimer() {
+            timeLeft = selectedTime * 60; // Convert minutes to seconds
+            timer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = formatTime(timeLeft);
+                if (timeLeft <= 0) {
+                    endTypingTest();
+                }
+            }, 1000);
+        }
+
+        /**
+         * Formats time in MM:SS format.
+         * @param {number} seconds - The number of seconds.
+         * @returns {string} Formatted time string.
+         */
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        }
+
+        /**
+         * Processes user typing input, compares it with the passage, and updates display.
+         */
+        function processTyping() {
+            let typedText = typingInput.value;
+            renderPassage(); // Re-render passage to update highlights
+
+            // If the user types beyond the passage length, truncate their input
+            if (typedText.length > currentPassage.length) {
+                typingInput.value = typedText.substring(0, currentPassage.length);
+                typedText = typingInput.value;
+            }
+
+            // If the user presses Enter, treat it as end of line/paragraph
+            // For simplicity, we'll just check if they typed the whole passage
+            if (typedText === currentPassage) {
+                endTypingTest();
+            }
+        }
+
+        /**
+         * Ends the typing test, calculates results, and displays them.
+         */
+        function endTypingTest() {
+            clearInterval(timer);
+            typingInput.disabled = true;
+            isTypingStarted = false;
+            startTypingBtn.disabled = false; // Re-enable start button
+
+            const totalTimeInSeconds = (Date.now() - startTime) / 1000;
+            const actualTimeInMinutes = totalTimeInSeconds / 60;
+
+            const typedText = typingInput.value;
+            typedWords = typedText.split(/\s+/);
+
+            // Calculate correct and incorrect characters/words
+            correctCharacters = 0;
+            incorrectCharacters = 0;
+            let totalWordsTyped = 0;
+            let incorrectWordsCount = 0;
+
+            const passageWordsArray = currentPassage.split(/\s+/);
+            const typedWordsArray = typedText.split(/\s+/);
+
+            totalWordsTyped = typedWordsArray.length;
+
+            for (let i = 0; i < passageWordsArray.length; i++) {
+                const pWord = passageWordsArray[i];
+                const tWord = typedWordsArray[i] || ''; // Handle case where typed text is shorter
+
+                // Character-level accuracy
+                for (let j = 0; j < Math.max(pWord.length, tWord.length); j++) {
+                    if (pWord[j] && tWord[j] && pWord[j] === tWord[j]) {
+                        correctCharacters++;
+                    } else if (pWord[j] !== tWord[j] || (pWord[j] && !tWord[j]) || (!pWord[j] && tWord[j])) {
+                        incorrectCharacters++;
+                    }
+                }
+
+                // Word-level accuracy
+                if (tWord !== pWord) {
+                    incorrectWordsCount++;
+                }
+            }
+
+            // WPM Calculations
+            // Formula 1: Gross WPM (Total Characters / 5) / Time in Minutes
+            const totalCharsTyped = typedText.length;
+            const grossWPM = actualTimeInMinutes > 0 ? Math.round((totalCharsTyped / 5) / actualTimeInMinutes) : 0;
+
+            // Formula 2: Net WPM (Gross WPM - (Incorrect Words / Time in Minutes))
+            const netWPM = actualTimeInMinutes > 0 ? Math.round(grossWPM - (incorrectWordsCount / actualTimeInMinutes)) : 0;
+
+            // Formula 3: CPM (Total Characters / Time in Minutes)
+            const cpm = actualTimeInMinutes > 0 ? Math.round(totalCharsTyped / actualTimeInMinutes) : 0;
+
+            // Accuracy Calculation
+            const totalPassageChars = currentPassage.length;
+            const accuracy = totalPassageChars > 0 ? Math.round((correctCharacters / totalPassageChars) * 100) : 0;
+
+
+            wpmGrossDisplay.textContent = grossWPM;
+            wpmNetDisplay.textContent = Math.max(0, netWPM); // Ensure WPM doesn't go negative
+            cpmDisplay.textContent = cpm;
+            accuracyDisplay.textContent = `${Math.max(0, accuracy)}%`; // Ensure accuracy doesn't go negative
+
+            displayWrongWords(passageWordsArray, typedWordsArray);
+            resultsSection.classList.remove('hidden');
+        }
+
+        /**
+         * Displays the words that were typed incorrectly.
+         * @param {string[]} passageWordsArray - Array of words from the original passage.
+         * @param {string[]} typedWordsArray - Array of words typed by the user.
+         */
+        function displayWrongWords(passageWordsArray, typedWordsArray) {
+            let wrongWordsHtml = '';
+            let foundWrong = false;
+
+            for (let i = 0; i < passageWordsArray.length; i++) {
+                const pWord = passageWordsArray[i];
+                const tWord = typedWordsArray[i] || '';
+
+                if (pWord !== tWord) {
+                    wrongWordsHtml += `<span class="wrong-word-highlight">${pWord}</span> (আপনি লিখেছেন: "${tWord || 'কিছুই না'}")<br>`;
+                    foundWrong = true;
+                }
+            }
+
+            if (!foundWrong) {
+                wrongWordsDisplay.textContent = "কোনো ভুল শব্দ নেই।";
+            } else {
+                wrongWordsDisplay.innerHTML = wrongWordsHtml;
+            }
+        }
+
+        /**
+         * Resets the typing test to its initial state.
+         */
+        function resetTypingTest() {
+            clearInterval(timer);
+            timer = null;
+            timeLeft = selectedTime * 60;
+            timerDisplay.textContent = formatTime(timeLeft);
+            typingInput.value = '';
+            typingInput.disabled = true;
+            isTypingStarted = false;
+            typedCharacters = 0;
+            correctCharacters = 0;
+            incorrectCharacters = 0;
+            currentWordIndex = 0;
+            currentCharIndex = 0;
+            renderPassage(); // Re-render to clear highlights
+            resetResults();
+            startTypingBtn.disabled = false; // Re-enable start button
+        }
+
+        /**
+         * Resets the results display.
+         */
+        function resetResults() {
+            wpmGrossDisplay.textContent = '০';
+            wpmNetDisplay.textContent = '০';
+            cpmDisplay.textContent = '০';
+            accuracyDisplay.textContent = '০%';
+            wrongWordsDisplay.textContent = 'কোনো ভুল শব্দ নেই।';
+            resultsSection.classList.add('hidden');
+        }
+
+        /**
+         * Copies the user's typed text to the clipboard.
+         */
+        function copyTypedText() {
+            const textToCopy = typingInput.value;
+            if (textToCopy) {
+                // Use document.execCommand('copy') for better compatibility in iframes
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                textArea.style.position = 'fixed'; // Prevent scrolling to bottom
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    const msg = successful ? 'সফলভাবে কপি করা হয়েছে!' : 'কপি করতে ব্যর্থ।';
+                    // Using a temporary div for message, as alert() is disallowed.
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = msg;
+                    messageDiv.className = 'fixed bottom-4 right-4 bg-gray-800 text-white p-3 rounded-md shadow-lg z-50';
+                    document.body.appendChild(messageDiv);
+                    setTimeout(() => {
+                        document.body.removeChild(messageDiv);
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = 'কপি করতে ব্যর্থ।';
+                    messageDiv.className = 'fixed bottom-4 right-4 bg-red-600 text-white p-3 rounded-md shadow-lg z-50';
+                    document.body.appendChild(messageDiv);
+                    setTimeout(() => {
+                        document.body.removeChild(messageDiv);
+                    }, 2000);
+                }
+                document.body.removeChild(textArea);
+            } else {
+                const messageDiv = document.createElement('div');
+                messageDiv.textContent = 'কপি করার জন্য কোনো লেখা নেই।';
+                messageDiv.className = 'fixed bottom-4 right-4 bg-yellow-600 text-white p-3 rounded-md shadow-lg z-50';
+                document.body.appendChild(messageDiv);
+                setTimeout(() => {
+                    document.body.removeChild(messageDiv);
+                }, 2000);
+            }
+        }
+
+        /**
+         * Applies the selected theme to the body.
+         * @param {string} themeName - The name of the theme ('normal-mode', 'light-mode', 'dark-mode').
+         */
+        function applyTheme(themeName) {
+            document.body.className = ''; // Clear existing classes
+            document.body.classList.add(themeName);
+            localStorage.setItem('theme', themeName); // Save theme preference
+        }
+
+        /**
+         * Placeholder function for loading passages.
+         * In a real app, this might fetch from a database or a file.
+         * For now, the passages are hardcoded in the `passages` object.
+         */
+        function loadPassages() {
+            // Passages are already defined in the `passages` object.
+            // If you want to add more passages, modify the `passages` object directly in the code.
+            // Example: passages.bengali.push("আপনার নতুন বাংলা প্যাসেজ এখানে।");
+            // Example: passages.english.push("Your new English passage here.");
+        }
+
+        // Initialize passage options on load
+        updatePassageOptions();
+    </script>
 </body>
 </html>
