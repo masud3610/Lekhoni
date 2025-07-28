@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekhoni - Typing Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the page background and font */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #63A169; /* Page background color */
+            transition: background-color 0.3s ease;
+        }
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+        }
+        body.grey-mode {
+            background-color: #cccccc; /* Grey background */
+            color: #333333; /* Darker text */
+        }
+        /* Specific styles for the passage and typing area to ensure auto-scroll and minimum height */
+        #passage-display {
+            overflow-y: auto; /* Enable vertical scrolling */
+            white-space: pre-wrap; /* Preserve whitespace and wrap text */
+            word-wrap: break-word; /* Break long words */
+            line-height: 1.5; /* Improve readability */
+            max-height: 250px; /* <--- এই লাইনটি যোগ করা হয়েছে */
+        }
+        #typing-input {
+            overflow-y: auto; /* Enable vertical scrolling */
+            white-space: pre-wrap; /* Preserve whitespace and wrap text */
+            word-wrap: break-word; /* Break long words */
+            line-height: 1.5; /* Improve readability */
+            /* min-height আপনার বর্তমান কোডে 10 rows এর জন্য সেট করা আছে, যা ঠিক আছে */
+        }
+        /* Timer flashing animation */
+        @keyframes timer-flash {
+            0% { color: red; transform: scale(1); }
+            50% { color: #ff6347; transform: scale(1.1); }
+            100% { color: red; transform: scale(1); }
+        }
+        .timer-flashing {
+            animation: timer-flash 0.8s infinite alternate;
+        }
+        /* Styles for corner dates */
+        .corner-date {
+            position: absolute;
+            top: 1rem;
+            font-weight: bold;
+            color: #ffffff; /* White text for visibility */
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 1.125rem; /* text-lg */
+            z-index: 10; /* Ensure it's above other content */
+        }
+        .top-left {
+            left: 1rem;
+        }
+        /* Removed .top-right as Arabic date is removed */
+        /* Added style for timer container */
+        .timer-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            position: relative; /* Added for absolute positioning of timer */
+        }
+        #timer-display {
+            /* Keep existing styles */
+            position: absolute; /* Added to position independently */
+            right: 0; /* Position to the far right */
+        }
+        #start-typing-message {
+            /* Ensure it takes up space, but can be hidden visually */
+            flex-grow: 1; /* Allows message to take available space */
+            text-align: left; /* Align message to left */
+        }
+        /* New style to prevent text selection */
+        .noselect {
+            -webkit-touch-callout: none; /* iOS Safari */
+            -webkit-user-select: none; /* Safari */
+            -khtml-user-select: none; /* Konqueror HTML */
+            -moz-user-select: none; /* Old versions of Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <div class="container mx-auto p-4 flex-grow">
+        <h1 class="text-center text-red-600 text-5xl font-bold mb-8 rounded-lg p-4 bg-white bg-opacity-90 shadow-lg">
+            WELCOME TO LEKHONI - TYPING TEST
+        </h1>
+
+        <div class="bg-white bg-opacity-90 p-8 rounded-xl shadow-lg mb-8">
+            <div class="timer-container">
+                <p id="start-typing-message" class="text-xl text-gray-600 font-medium">You can start typing, the timer will begin when you press the first key.</p>
+                <div id="timer-display" class="text-3xl font-extrabold text-green-700 bg-gray-200 px-3 py-1 rounded-lg">00:00</div>
+            </div>
+            
+            <div id="words-typed-container" class="text-xl text-gray-600 font-medium text-right mt-2">
+                Words Typed: <span id="words-typed-count" class="font-bold">0</span>
+            </div>
+
+            <div class="mb-8 p-6 bg-gray-100 border border-gray-300 rounded-lg shadow-inner" style="min-height: 300px;">
+                <p id="passage-display" class="text-lg text-gray-800 noselect"></p>
+            </div>
+
+            <div class="mb-8">
+                <label for="typing-input" class="block text-gray-700 text-lg font-semibold mb-2">Start Typing Here:</label>
+                <textarea id="typing-input" class="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-lg resize-y" rows="10" placeholder="Type the passage here..."></textarea>
+                </div>
+            
+            <div class="flex justify-center mb-8">
+                <button id="see-result-button" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-lg shadow-md hover:bg-purple-700 transition duration-300 ease-in-out transform hover:scale-105">
+                    See Result
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <label class="inline-flex items-center p-3 bg-gray-100 rounded-lg shadow-sm cursor-pointer">
+                    <input type="checkbox" id="backspace-toggle" checked class="form-checkbox h-5 w-5 text-green-600 rounded">
+                    <span class="ml-2 text-gray-700 text-lg">Backspace On/Off</span>
+                </label>
+                <label class="inline-flex items-center p-3 bg-gray-100 rounded-lg shadow-sm cursor-pointer">
+                    <input type="checkbox" id="autoscroll-toggle" checked class="form-checkbox h-5 w-5 text-green-600 rounded">
+                    <span class="ml-2 text-gray-700 text-lg">Auto Scroll On/Off</span>
+                </label>
+                <label class="inline-flex items-center p-3 bg-gray-100 rounded-lg shadow-sm cursor-pointer">
+                    <input type="checkbox" id="highlight-toggle" checked class="form-checkbox h-5 w-5 text-green-600 rounded">
+                    <span class="ml-2 text-gray-700 text-lg">Wrong Word Highlight On/Off</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4 mb-8">
+                <button id="restart-button" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out transform hover:scale-105">
+                    Restart Test
+                </button>
+                <button id="copy-typed-text-button" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out transform hover:scale-105">
+                    Copy Typed Text
+                </button>
+                <button id="go-back-button" class="px-6 py-3 bg-gray-600 text-white font-bold rounded-lg shadow-md hover:bg-gray-700 transition duration-300 ease-in-out transform hover:scale-105">
+                    Back to Selection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-auto rounded-t-lg">
+        <p class="text-sm">&copy; COPYRIGHT 2025 - LEKHONI ALL RIGHTS RESERVED</p>
+    </footer>
+
+    <script>
+        // Global variables for Firebase configuration and app ID.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Dummy Firebase setup for demonstration purposes without actual Firebase SDK
+        let db = null;
+        let auth = null;
+        let userId = 'anonymous_user'; // Default anonymous user ID
+
+        async function initializeFirebaseAndAuth() {
+            console.log("Simulating Firebase initialization...");
+            if (initialAuthToken) {
+                console.log("Signing in with custom token (simulated)...");
+                userId = 'authenticated_user_id';
+            } else {
+                console.log("Signing in anonymously (simulated)...");
+                userId = 'anonymous_' + Math.random().toString(36).substr(2, 9);
+            }
+            console.log("User ID:", userId);
+        }
+        initializeFirebaseAndAuth();
+
+        // DOM Elements
+        const startTypingMessage = document.getElementById('start-typing-message');
+        const timerDisplay = document.getElementById('timer-display');
+        const wordsTypedCount = document.getElementById('words-typed-count');
+        const passageDisplay = document.getElementById('passage-display');
+        const typingInput = document.getElementById('typing-input');
+        const backspaceToggle = document.getElementById('backspace-toggle');
+        const autoscrollToggle = document.getElementById('autoscroll-toggle');
+        const highlightToggle = document.getElementById('highlight-toggle');
+        const restartButton = document.getElementById('restart-button');
+        const copyTypedTextButton = document.getElementById('copy-typed-text-button');
+        const goBackButton = document.getElementById('go-back-button'); // New button
+        const seeResultButton = document.getElementById('see-result-button'); // Added
+
+        // Typing Test State Variables
+        let timerInterval = null;
+        let timeLeft = 0;
+        let totalTime = 0; // In seconds
+        let isTypingStarted = false;
+        let currentPassage = '';
+        let correctCharacters = 0;
+        let totalCharactersTyped = 0;
+        let wrongWords = new Set();
+        let passageWords = [];
+        let typedWords = [];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTestSettings();
+            resetTest();
+        });
+
+        // Event Listeners
+        typingInput.addEventListener('keydown', handleKeyDown);
+        typingInput.addEventListener('input', handleTypingInput);
+        restartButton.addEventListener('click', resetTest);
+        copyTypedTextButton.addEventListener('click', copyTypedText);
+        backspaceToggle.addEventListener('change', toggleBackspace);
+        autoscrollToggle.addEventListener('change', toggleAutoscroll);
+        highlightToggle.addEventListener('change', toggleHighlight);
+        goBackButton.addEventListener('click', () => {
+            window.location.href = 'index.html'; // Go back to the selection page
+        });
+        seeResultButton.addEventListener('click', displayResults); // Added
+
+        // Functions
+        function loadTestSettings() {
+            currentPassage = localStorage.getItem('typingPassage') || 'No passage selected. Please go back and select one.';
+            // প্যাসেজ টেক্সটকে NFC ফর্মে রূপান্তর করুন যাতে Unicode এর ভিন্ন ফর্মগুলো সামঞ্জস্যপূর্ণ হয়।
+            currentPassage = currentPassage.normalize('NFC');
+            totalTime = parseInt(localStorage.getItem('typingTime')) * 60 || 60; // Default to 1 minute
+            
+            passageDisplay.textContent = currentPassage;
+            passageWords = currentPassage.split(/\s+/);
+            timeLeft = totalTime;
+            timerDisplay.textContent = formatTime(timeLeft);
+        }
+
+        function handleKeyDown(event) {
+            if (!backspaceToggle.checked && event.key === 'Backspace') {
+                event.preventDefault();
+            }
+        }
+
+        function handleTypingInput() {
+            if (!isTypingStarted) {
+                startTest();
+            }
+
+            // --- 'য়' অক্ষর সমস্যা সমাধানের পুরনো কোডটি বাদ দেওয়া হয়েছে এবং তার পরিবর্তে একটি সাধারণ Unicode Normalization পদ্ধতি ব্যবহার করা হয়েছে। ---
+            let typedText = typingInput.value;
+            // টাইপ করা টেক্সটকে NFC ফর্মে রূপান্তর করুন যাতে 'ড়', 'য়' সহ সকল অক্ষরের Unicode ফর্ম সামঞ্জস্যপূর্ণ হয়।
+            typedText = typedText.normalize('NFC');
+            typingInput.value = typedText; // পরিবর্তিত টেক্সট ইনপুট ফিল্ডে সেট করুন।
+            // --- নতুন Unicode Normalization কোড শেষ ---
+
+            typedWords = typedText.split(/\s+/).filter(word => word.length > 0);
+            wordsTypedCount.textContent = typedWords.length;
+
+            updateMetrics(typedText);
+            checkErrors(typedText);
+
+            if (autoscrollToggle.checked) {
+                typingInput.scrollTop = typingInput.scrollHeight;
+            }
+
+            const lastTypedWord = typedWords[typedWords.length - 1];
+            const lastPassageWord = passageWords[passageWords.length - 1];
+            if (typedWords.length === passageWords.length && lastTypedWord === lastPassageWord && typedText.endsWith(currentPassage[currentPassage.length - 1])) {
+                endTest();
+            }
+        }
+
+        function startTest() {
+            isTypingStarted = true;
+            startTypingMessage.style.visibility = 'hidden';
+            timerDisplay.textContent = formatTime(timeLeft);
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = formatTime(timeLeft);
+
+                if (timeLeft <= 50 && timeLeft > 0) {
+                    timerDisplay.classList.add('timer-flashing');
+                } else {
+                    timerDisplay.classList.remove('timer-flashing');
+                }
+
+                if (timeLeft <= 0) {
+                    endTest();
+                }
+            }, 1000);
+        }
+
+        function endTest() {
+            clearInterval(timerInterval);
+            isTypingStarted = false;
+            typingInput.disabled = true;
+            timerDisplay.classList.remove('timer-flashing');
+
+            const typedText = typingInput.value;
+            updateMetrics(typedText);
+            checkErrors(typedText);
+
+            startTypingMessage.textContent = "Test Finished!";
+            startTypingMessage.style.visibility = 'visible';
+            startTypingMessage.classList.add('text-green-700', 'font-bold');
+        }
+
+        function resetTest() {
+            clearInterval(timerInterval);
+            isTypingStarted = false;
+            typingInput.value = '';
+            typingInput.disabled = false;
+            timeLeft = totalTime; // Reset to original selected time
+            timerDisplay.textContent = formatTime(timeLeft);
+            timerDisplay.classList.remove('timer-flashing');
+            startTypingMessage.textContent = "You can start typing, the timer will begin when you press the first key.";
+            startTypingMessage.style.visibility = 'visible';
+            startTypingMessage.classList.remove('text-green-700', 'font-bold');
+            correctCharacters = 0;
+            totalCharactersTyped = 0;
+            wrongWords.clear();
+            typedWords = [];
+            wordsTypedCount.textContent = 0; // Reset word count
+            passageDisplay.innerHTML = currentPassage; // Reset highlighting
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+        }
+
+        function updateMetrics(typedText) {
+            totalCharactersTyped = typedText.length;
+            correctCharacters = 0;
+
+            const passageWordsCurrent = currentPassage.split(/\s+/);
+            const typedWordsCurrent = typedText.split(/\s+/);
+
+            let currentCorrectChars = 0;
+            for (let i = 0; i < typedWordsCurrent.length; i++) {
+                const typedWord = typedWordsCurrent[i];
+                const passageWord = passageWordsCurrent[i];
+
+                if (passageWord && typedWord) {
+                    const minLength = Math.min(typedWord.length, passageWord.length);
+                    for (let j = 0; j < minLength; j++) {
+                        if (typedWord[j] === passageWord[j]) { 
+                            currentCorrectChars++;
+                        }
+                    }
+                    if (typedWord.length <= passageWord.length && typedWord === passageWord.substring(0, typedWord.length)) {
+                        if (i < typedWordsCurrent.length - 1) {
+                             currentCorrectChars++;
+                        } else if (typedText.endsWith(' ') && typedWord === passageWord) {
+                            currentCorrectChars++;
+                        }
+                    }
+                }
+            }
+            correctCharacters = currentCorrectChars;
+        }
+
+        function checkErrors(typedText) {
+            wrongWords.clear();
+            let highlightedPassageHtml = '';
+            const passageWordsArray = currentPassage.split(/\s+/);
+            const typedWordsArray = typedText.split(/\s+/);
+
+            let currentPassageCharIndex = 0;
+
+            for (let i = 0; i < passageWordsArray.length; i++) {
+                const passageWord = passageWordsArray[i];
+                const typedWord = typedWordsArray[i];
+
+                if (typedWord === undefined) {
+                    highlightedPassageHtml += currentPassage.substring(currentPassageCharIndex);
+                    break;
+                }
+
+                let wordHtml = '';
+                let isWordWrong = false;
+
+                for (let j = 0; j < passageWord.length; j++) {
+                    const passageChar = passageWord[j];
+                    const typedChar = typedWord[j];
+
+                    if (typedChar === undefined) {
+                        isWordWrong = true;
+                        if (highlightToggle.checked) {
+                            wordHtml += `<span class="text-red-500 font-bold">${passageChar}</span>`;
+                        } else {
+                            wordHtml += passageChar;
+                        }
+                    } else {
+                        if (passageChar === typedChar) {
+                            wordHtml += passageChar;
+                        } else {
+                            isWordWrong = true;
+                            if (highlightToggle.checked) {
+                                wordHtml += `<span class="text-red-500 font-bold">${passageChar}</span>`;
+                            } else {
+                                wordHtml += passageChar;
+                            }
+                        }
+                    }
+                }
+
+                if (typedWord.length > passageWord.length) {
+                    isWordWrong = true;
+                }
+
+                
+                
+                highlightedPassageHtml += wordHtml;
+
+                if (i < passageWordsArray.length - 1) {
+                    highlightedPassageHtml += ' ';
+                    currentPassageCharIndex += passageWord.length + 1;
+                } else {
+                    currentPassageCharIndex += passageWord.length;
+                }
+            }
+            passageDisplay.innerHTML = highlightedPassageHtml;
+        }
+
+        function toggleBackspace() {
+            console.log('Backspace toggle:', backspaceToggle.checked ? 'On' : 'Off');
+        }
+
+        function toggleAutoscroll() {
+            console.log('Autoscroll toggle:', autoscrollToggle.checked ? 'On' : 'Off');
+        }
+
+        function toggleHighlight() {
+            checkErrors(typingInput.value);
+            console.log('Highlight toggle:', highlightToggle.checked ? 'On' : 'Off');
+        }
+
+        function copyTypedText() {
+            typingInput.select();
+            try {
+                const successful = document.execCommand('copy');
+                const msg = successful ? 'Copied to clipboard!' : 'Failed to copy.';
+                const messageBox = document.createElement('div');
+                messageBox.textContent = msg;
+                messageBox.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300 opacity-0';
+                document.body.appendChild(messageBox);
+                setTimeout(() => {
+                    messageBox.style.opacity = '1';
+                }, 10);
+                setTimeout(() => {
+                    messageBox.style.opacity = '0';
+                    messageBox.addEventListener('transitionend', () => messageBox.remove());
+                }, 2000);
+            } catch (err) {
+                console.error('Copy command failed:', err);
+                const messageBox = document.createElement('div');
+                messageBox.textContent = 'Failed to copy text. Please try manually.';
+                messageBox.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300 opacity-0';
+                document.body.appendChild(messageBox);
+                setTimeout(() => {
+                    messageBox.style.opacity = '1';
+                }, 10);
+                setTimeout(() => {
+                    messageBox.style.opacity = '0';
+                    messageBox.addEventListener('transitionend', () => messageBox.remove());
+                }, 2000);
+            }
+        }
+
+        function displayResults() {
+            endTest(); // Ensure the test is ended before showing results
+
+            const typedText = typingInput.value;
+            const typedWordsArray = typedText.split(/\s+/).filter(word => word.length > 0);
+            const passageWordsArray = currentPassage.split(/\s+/).filter(word => word.length > 0);
+
+            // Calculate total characters without spaces
+            const totalTypedCharactersNoSpaces = typedText.replace(/\s/g, '').length;
+
+            // Determine the time taken for the test
+            const timeTakenInMinutes = (totalTime - timeLeft) / 60;
+            const effectiveTime = timeTakenInMinutes > 0 ? timeTakenInMinutes : totalTime / 60;
+
+            // Calculate gross WPM
+            const grossWPM = (totalTypedCharactersNoSpaces / 5) / effectiveTime;
+
+            // Calculate errors, correct characters and words based on passage
+            let errors = 0;
+            let correctChars = 0;
+
+            for (let i = 0; i < typedWordsArray.length; i++) {
+                const typedWord = typedWordsArray[i];
+                const passageWord = passageWordsArray[i] || '';
+                
+                if (typedWord === passageWord) {
+                    correctChars += typedWord.length;
+                } else {
+                    errors++;
+                    const minLength = Math.min(typedWord.length, passageWord.length);
+                    for (let j = 0; j < minLength; j++) {
+                        if (typedWord[j] === passageWord[j]) {
+                            correctChars++;
+                        }
+                    }
+                }
+            }
+
+            // Calculate Net WPM
+            const netWPM = (correctChars / 5) / effectiveTime;
+
+            // Calculate accuracy based on correct characters typed against total typed characters
+            const accuracy = totalTypedCharactersNoSpaces > 0 ? ((correctChars / totalTypedCharactersNoSpaces) * 100).toFixed(2) : 0;
+            
+            const resultsMessage = `
+                <p><strong>Typing Test Results:</strong></p>
+                <p>Total Characters (without spaces): ${totalTypedCharactersNoSpaces}</p>
+                <p>Total Words Typed: ${typedWordsArray.length}</p>
+                <p>Total Words in Passage: ${passageWordsArray.length}</p>
+                <p>Gross WPM: ${grossWPM.toFixed(2)}</p>
+                <p>Errors: ${errors}</p>
+                <p>Net WPM: ${netWPM.toFixed(2)}</p>
+                <p>Accuracy: ${accuracy}%</p>
+            `;
+
+            const resultsBox = document.createElement('div');
+            resultsBox.innerHTML = resultsMessage;
+            resultsBox.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50';
+            resultsBox.style.opacity = '0';
+            resultsBox.style.transition = 'opacity 0.3s ease-in-out';
+
+            const resultsContent = document.createElement('div');
+            resultsContent.className = 'bg-white p-8 rounded-lg shadow-xl text-center text-gray-800 text-xl font-semibold';
+            resultsContent.innerHTML = resultsMessage;
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = 'Close';
+            closeButton.className = 'mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700';
+            closeButton.onclick = () => {
+                resultsBox.style.opacity = '0';
+                resultsBox.addEventListener('transitionend', () => resultsBox.remove());
+            };
+            resultsContent.appendChild(closeButton);
+            resultsBox.appendChild(resultsContent);
+            document.body.appendChild(resultsBox);
+
+            setTimeout(() => {
+                resultsBox.style.opacity = '1';
+            }, 10);
+        }
+
+    </script>
+</body>
+</html>
